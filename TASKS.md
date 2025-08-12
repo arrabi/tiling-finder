@@ -6,9 +6,9 @@
 - [x] Expose API endpoints to start the search and retrieve saved patterns.
 - [x] Build a minimal HTML/JS interface to start the search and display patterns.
 - [x] Document development and usage instructions.
+- [x] Enforce adjacency and similarity constraints in the search algorithm.
 
 ## Remaining
-- [ ] Enforce adjacency and similarity constraints in the search algorithm.
 - [ ] Improve performance and resume capability for long-running searches.
 - [ ] Expand UI to visualize tiling patterns more richly.
 - [ ] Add user controls for configuring search parameters.
