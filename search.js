@@ -23,7 +23,16 @@ function randomSquare(maxSize) {
   return { x, y, size };
 }
 
-// very naive pattern generator for demonstration
+function adjacent(a, b) {
+  const horizontallyTouching =
+    a.y === b.y &&
+    (a.x + a.size === b.x || b.x + b.size === a.x);
+  const verticallyTouching =
+    a.x === b.x &&
+    (a.y + a.size === b.y || b.y + b.size === a.y);
+  return horizontallyTouching || verticallyTouching;
+}
+
 function generatePattern(gridSize = 6, count = 5) {
   const squares = [];
   for (let i = 0; i < count; i++) {
@@ -32,8 +41,15 @@ function generatePattern(gridSize = 6, count = 5) {
     do {
       sq = randomSquare(gridSize);
       attempts++;
-    } while (attempts < 10 && squares.some(s => overlaps(s, sq)));
-    squares.push(sq);
+    } while (
+      attempts < 50 &&
+      (squares.some(s => overlaps(s, sq)) ||
+        (squares.length > 0 && !squares.some(s => adjacent(s, sq))))
+    );
+
+    if (attempts < 50) {
+      squares.push(sq);
+    }
   }
   return { gridSize, squares };
 }
@@ -45,14 +61,41 @@ function overlaps(a, b) {
            b.y >= a.y + a.size);
 }
 
+function normalizeSquares(squares) {
+  return squares
+    .map(s => ({ ...s }))
+    .sort((a, b) =>
+      a.x - b.x || a.y - b.y || a.size - b.size
+    );
+}
+
+function patternsEqual(a, b) {
+  if (a.gridSize !== b.gridSize || a.squares.length !== b.squares.length) {
+    return false;
+  }
+  const sqA = normalizeSquares(a.squares);
+  const sqB = normalizeSquares(b.squares);
+  return sqA.every((sq, i) =>
+    sq.x === sqB[i].x && sq.y === sqB[i].y && sq.size === sqB[i].size
+  );
+}
+
 function step(iterations = 1) {
   const state = loadJSON(STATE_FILE) || { iterations: 0 };
   const patterns = loadJSON(PATTERN_FILE) || [];
 
   for (let i = 0; i < iterations; i++) {
-    const pattern = generatePattern();
-    patterns.push(pattern);
-    state.iterations++;
+    let pattern;
+    let attempts = 0;
+    do {
+      pattern = generatePattern();
+      attempts++;
+    } while (attempts < 5 && patterns.some(p => patternsEqual(p, pattern)));
+
+    if (!patterns.some(p => patternsEqual(p, pattern))) {
+      patterns.push(pattern);
+      state.iterations++;
+    }
   }
 
   saveJSON(STATE_FILE, state);
