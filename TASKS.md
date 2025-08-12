@@ -10,6 +10,8 @@
 - [x] Filter out non-tileable patterns and record discarded attempts.
 
 ## Remaining
+- [ ] Do not allow patterns or tiles that have spaces in between the squares
+- [ ] For successful patterns, show how they look if tiled
 - [ ] Add user controls for configuring search parameters.
 - [ ] Create automated tests for search logic and API endpoints.
 - [ ] Package app for deployment and provide containerization instructions.
