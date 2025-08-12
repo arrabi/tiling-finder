@@ -3,7 +3,6 @@ const path = require('path');
 
 const STATE_FILE = path.join(__dirname, 'data', 'state.json');
 const PATTERN_FILE = path.join(__dirname, 'data', 'patterns.json');
-const DISCARDED_FILE = path.join(__dirname, 'data', 'discarded.json');
 
 function loadJSON(file) {
   try {
@@ -35,24 +34,30 @@ function adjacent(a, b) {
 }
 
 function generatePattern(gridSize = 6, count = 5) {
-  const squares = [];
-  for (let i = 0; i < count; i++) {
-    let sq;
-    let attempts = 0;
-    do {
-      sq = randomSquare(gridSize);
-      attempts++;
-    } while (
-      attempts < 50 &&
-      (squares.some(s => overlaps(s, sq)) ||
-        (squares.length > 0 && !squares.some(s => adjacent(s, sq))))
-    );
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const squares = [];
+    for (let i = 0; i < count; i++) {
+      let sq;
+      let tries = 0;
+      do {
+        sq = randomSquare(gridSize);
+        tries++;
+      } while (
+        tries < 50 &&
+        (squares.some(s => overlaps(s, sq)) ||
+          (squares.length > 0 && !squares.some(s => adjacent(s, sq))))
+      );
 
-    if (attempts < 50) {
-      squares.push(sq);
+      if (tries < 50) {
+        squares.push(sq);
+      }
+    }
+    const pattern = { gridSize, squares };
+    if (!hasGaps(pattern)) {
+      return pattern;
     }
   }
-  return { gridSize, squares };
+  return null;
 }
 
 function overlaps(a, b) {
@@ -81,6 +86,10 @@ function patternsEqual(a, b) {
   );
 }
 
+function hasGaps(pattern) {
+  return !isFilled(pattern);
+}
+
 function getBoundingBox(squares) {
   const xs = squares.map(s => [s.x, s.x + s.size]);
   const ys = squares.map(s => [s.y, s.y + s.size]);
@@ -107,42 +116,27 @@ function isFilled(pattern) {
 }
 
 function isTileable(pattern) {
-  return isFilled(pattern);
+  return !hasGaps(pattern);
 }
 
 function step(iterations = 1) {
   const state = loadJSON(STATE_FILE) || { iterations: 0 };
   const patterns = loadJSON(PATTERN_FILE) || [];
-  const discarded = loadJSON(DISCARDED_FILE) || [];
 
   for (let i = 0; i < iterations; i++) {
-    let pattern;
-    let attempts = 0;
-    do {
-      pattern = generatePattern();
-      attempts++;
-    } while (
-      attempts < 5 &&
-      (patterns.some(p => patternsEqual(p, pattern)) ||
-        discarded.some(p => patternsEqual(p, pattern)))
-    );
-
-    if (
-      !patterns.some(p => patternsEqual(p, pattern)) &&
-      !discarded.some(p => patternsEqual(p, pattern))
-    ) {
-      if (isTileable(pattern)) {
-        patterns.push(pattern);
-      } else {
-        discarded.push(pattern);
-      }
-      state.iterations++;
+    let pattern = generatePattern();
+    if (!pattern || hasGaps(pattern)) {
+      continue;
     }
+    if (patterns.some(p => patternsEqual(p, pattern))) {
+      continue;
+    }
+    patterns.push(pattern);
+    state.iterations++;
   }
 
   saveJSON(STATE_FILE, state);
   saveJSON(PATTERN_FILE, patterns);
-  saveJSON(DISCARDED_FILE, discarded);
   return { iterations: state.iterations };
 }
 

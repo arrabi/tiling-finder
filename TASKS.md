@@ -9,8 +9,9 @@
 - [x] Enforce adjacency and similarity constraints in the search algorithm.
 - [x] Filter out non-tileable patterns and record discarded attempts.
 
+- [x] Do not allow patterns or tiles that have spaces in between the squares
+
 ## Remaining
-- [ ] Do not allow patterns or tiles that have spaces in between the squares
 - [ ] For successful patterns, show how they look if tiled
 - [ ] Add user controls for configuring search parameters.
 - [ ] Create automated tests for search logic and API endpoints.
