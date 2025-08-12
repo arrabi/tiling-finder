@@ -3,6 +3,7 @@ const path = require('path');
 
 const STATE_FILE = path.join(__dirname, 'data', 'state.json');
 const PATTERN_FILE = path.join(__dirname, 'data', 'patterns.json');
+const DISCARDED_FILE = path.join(__dirname, 'data', 'discarded.json');
 
 function loadJSON(file) {
   try {
@@ -80,9 +81,39 @@ function patternsEqual(a, b) {
   );
 }
 
+function getBoundingBox(squares) {
+  const xs = squares.map(s => [s.x, s.x + s.size]);
+  const ys = squares.map(s => [s.y, s.y + s.size]);
+  const minX = Math.min(...xs.map(v => v[0]));
+  const maxX = Math.max(...xs.map(v => v[1]));
+  const minY = Math.min(...ys.map(v => v[0]));
+  const maxY = Math.max(...ys.map(v => v[1]));
+  return { minX, minY, width: maxX - minX, height: maxY - minY };
+}
+
+function isFilled(pattern) {
+  const { squares } = pattern;
+  if (squares.length === 0) return false;
+  const box = getBoundingBox(squares);
+  const grid = Array.from({ length: box.height }, () => Array(box.width).fill(false));
+  for (const sq of squares) {
+    for (let y = sq.y - box.minY; y < sq.y - box.minY + sq.size; y++) {
+      for (let x = sq.x - box.minX; x < sq.x - box.minX + sq.size; x++) {
+        grid[y][x] = true;
+      }
+    }
+  }
+  return grid.every(row => row.every(cell => cell));
+}
+
+function isTileable(pattern) {
+  return isFilled(pattern);
+}
+
 function step(iterations = 1) {
   const state = loadJSON(STATE_FILE) || { iterations: 0 };
   const patterns = loadJSON(PATTERN_FILE) || [];
+  const discarded = loadJSON(DISCARDED_FILE) || [];
 
   for (let i = 0; i < iterations; i++) {
     let pattern;
@@ -90,16 +121,28 @@ function step(iterations = 1) {
     do {
       pattern = generatePattern();
       attempts++;
-    } while (attempts < 5 && patterns.some(p => patternsEqual(p, pattern)));
+    } while (
+      attempts < 5 &&
+      (patterns.some(p => patternsEqual(p, pattern)) ||
+        discarded.some(p => patternsEqual(p, pattern)))
+    );
 
-    if (!patterns.some(p => patternsEqual(p, pattern))) {
-      patterns.push(pattern);
+    if (
+      !patterns.some(p => patternsEqual(p, pattern)) &&
+      !discarded.some(p => patternsEqual(p, pattern))
+    ) {
+      if (isTileable(pattern)) {
+        patterns.push(pattern);
+      } else {
+        discarded.push(pattern);
+      }
       state.iterations++;
     }
   }
 
   saveJSON(STATE_FILE, state);
   saveJSON(PATTERN_FILE, patterns);
+  saveJSON(DISCARDED_FILE, discarded);
   return { iterations: state.iterations };
 }
 
